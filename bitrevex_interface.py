@@ -13,6 +13,7 @@ from io import BytesIO
 
 class BitrevexError(RuntimeError):
     def __init__(self, arg, status=None):
+        self.status=status
         self.message=arg
         self.args=arg
 
@@ -56,9 +57,11 @@ class BitrevexInterface:
         response_data = json.loads(buffer.getvalue().decode('utf-8'))
 
         if "error" in response_data:
+            print(response_data)
             if "jsonrpc" in response_data :
                 raise BitrevexError(response_data['result']['message'], response_data['error'])
             else:
-                raise BitrevexError(response_data['result']['message'])
+
+                raise BitrevexError(response_data['error'])
 
         return response_data['result']

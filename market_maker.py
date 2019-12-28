@@ -65,7 +65,6 @@ class MarketMaker:
             min_buy_price = min(buy_prices)
 
             # compute the spread
-            print([order for order in open_orders if order['pair'] == self.pair and order['side'] == 'BUY'] )
 
             spread = max_sell_price - min_buy_price
 
@@ -154,6 +153,7 @@ class MarketMaker:
 
             return {
                 'pair': self.pair,
+                'quantity':quantity,
                 'spread': spread,
                 'mid_price': mid_price,
                 'buy_price': buy_price,

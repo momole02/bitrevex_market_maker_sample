@@ -16,12 +16,14 @@ class BotThread(threading.Thread):
     max_shots : number of signats to send
     mmaker : a full initialized market maker
     '''
-    def __init__(self, delay, max_shots, mmaker ):
+    def __init__(self, delay, max_shots, mmaker, window ):
         threading.Thread.__init__(self)
         self.delay = delay
         self.max_shots = max_shots
         self.mmaker = mmaker
+        self.window=window
         self.last_shot_time = time.time()
+        self.report=None
 
     '''
     Bot thread entry point
@@ -47,12 +49,17 @@ class BotThread(threading.Thread):
                         report['sell_price'],
                         report['mid_price']
                     ))
+                    self.report=report
+                    self.report['remaining_shots']=remaining_shots
+                    self.window.event_generate('<<Bot_Round>>')
 
                 except MarketMakerError as err:
                     print("[MarketMaker thread] error : ", err.message, err.api_message)
-
+                    break
                 except Exception as err:
                     print("[MarketMaker thread] unexpected error : ", err.args)
                     break
                 finally:
                     self.last_shot_time = time.time()
+
+        self.window.event_generate('<<Bot_Terminated>>')
