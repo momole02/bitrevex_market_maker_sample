@@ -29,7 +29,7 @@ class BitrevexInterface:
     def __init__(self,endpoint, api_key=None):
         self.api_key=api_key
         self.endpoint=endpoint
-        self.url = 'http://localhost:8000/api/v1/{}?_key={}'.format(self.endpoint,self.api_key)
+        self.url = 'https://bitrevex.com/api/v1/{}?_key={}'.format(self.endpoint,self.api_key)
 
 
     '''
@@ -57,7 +57,6 @@ class BitrevexInterface:
         response_data = json.loads(buffer.getvalue().decode('utf-8'))
 
         if "error" in response_data:
-            print(response_data)
             if "jsonrpc" in response_data :
                 raise BitrevexError(response_data['result']['message'], response_data['error'])
             else:

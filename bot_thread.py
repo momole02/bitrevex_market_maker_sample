@@ -36,7 +36,7 @@ class BotThread(threading.Thread):
         while remaining_shots>0 and not self.must_stop:
             tm=time.time()
 
-            if tm-self.last_shot_time >= self.delay:
+            if tm-self.last_shot_time >= self.delay: # Bot entry condition
                 try:
                     print("[MarketMaker thread] sending order...")
 

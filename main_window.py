@@ -14,17 +14,19 @@ import re
 from datetime import datetime
 
 from settings import *
-from bitrevex_interface import *
-from market_maker import *
 from bot_thread import *
 
 class MainWindow(Tk):
 
+    '''
+    Create the window
+    '''
     def __init__(self, parent=None):
+
+        #Inititalize the window title, and other config
         Tk.__init__(self, parent)
         self.title("Bitrevex(R) Market Maker sample")
         self.resizable(False, False)
-        #self.geometry("480x320")
 
         #some tracked widgets elements
         self.tab1=self.tab2=None
@@ -61,43 +63,23 @@ class MainWindow(Tk):
         self.mon_remaining_shots=StringVar()
 
 
-        self.bot_ready = False
-        self.settings=Settings()
+        #build the user interface
         self.construct_tabs()
         self.construct_tab1()
         self.construct_tab2()
+
+        self.settings=Settings()
         self.make_bot_unready()
         self.load_settings()
 
         self.bthread=None
+        self.bot_ready = False
         self.bind('<<Bot_Round>>', self.on_bot_round)
         self.bind('<<Bot_Terminated>>', self.on_bot_terminated)
 
-    def make_bot_unready(self):
-        self.update_monitor(bot_state='NOT CONFIGURED', last_update_time='00:00:00',
-                            pair='', user='', last_mid_price=0, last_spread=0, last_buy_price=0,
-                            last_sell_price=0, last_quantity=0,
-                            last_order_status='', remaining_shots=0)
-        self.bot_ready=False
-
-    def make_bot_ready(self):
-        self.update_monitor(bot_state='READY', last_update_time='00:00:00',
-                            user="{}".format(self.user_data['user_email']),
-                            pair="{}/{}".format(self.settings.want_asset, self.settings.offer_asset),
-                            last_mid_price=0, last_spread=0, last_buy_price=0,
-                            last_sell_price=0, last_quantity=0,
-                            last_order_status='', remaining_shots=0)
-        self.bot_ready=True
-
-    def make_bot_running(self):
-        self.update_monitor(bot_state='RUNNING', last_update_time='00:00:00',
-                            user="{}".format(self.user_data['user_email']),
-                            pair="{}/{}".format(self.settings.want_asset, self.settings.offer_asset),
-                            last_mid_price=0, last_spread=0, last_buy_price=0,
-                            last_sell_price=0, last_quantity=0,
-                            last_order_status='', remaining_shots=0)
-        self.bot_ready=True
-
+    '''
+    Construct the notebook widget(with tabs)
+    '''
     def construct_tabs(self):
         notebook = ttk.Notebook(self)
         tab1 = ttk.Frame(notebook)
@@ -112,6 +94,9 @@ class MainWindow(Tk):
         self.tab2=tab2
 
 
+    '''
+    Construct the tab 1 (settings)
+    '''
     def construct_tab1(self):
         t1=self.tab1
 
@@ -139,6 +124,9 @@ class MainWindow(Tk):
 
         Button(t1, text="Save settings", command=self.save_settings).grid(row=8, column=0, padx=5, pady=10, sticky=W)
 
+    '''
+    Construct the tab 2 (bot monitoring)
+    '''
     def construct_tab2(self):
         t2=self.tab2
         self.mon_bot_state_label=Label(t2, textvariable=self.mon_bot_state,relief=RIDGE)
@@ -159,51 +147,64 @@ class MainWindow(Tk):
         self.stop_button=Button(t2, text="Stop !", state="disabled", command=self.stop_bot)
         self.stop_button.grid(row=9,column=1,pady=15,sticky=W+E+N+S)
 
+    '''
+    Verify the user provided settings
+    '''
     def verify_settings_stage1(self):
-        if  not re.match(r'^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$', self.balance_ratio.get()):
+
+        # verify the balance format
+        if not re.match(r'^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$', self.balance_ratio.get()):
             messagebox.showerror("Market maker", "Verify the balance ratio format")
             return False
-
+        # verify the balance ratio (1)
         if float(self.balance_ratio.get()) < 1e-4:
             messagebox.showerror("Market maker", "Your balance ratio is too small or null")
             return False
 
-
+        # verify the balance ratio (2)
         if float(self.balance_ratio.get()) > 1:
             messagebox.showerror("Market maker", "Your balance ratio must be < 1")
             return False
 
-
+        # verify the max shots
         if self.max_shots.get() == 0:
             messagebox.showerror("Market maker", "Can't deal with a zero 'max shots' ")
             return False
 
+        # verify the aggressiveness
         if self.aggressiveness.get() == 0:
             messagebox.showerror("Market maker", "Make your bot more aggressive than that !")
             return False
 
-        self.want_asset.set(self.want_asset.get().strip())
+        self.want_asset.set(self.want_asset.get().strip()) # remove spaces around
         self.offer_asset.set(self.offer_asset.get().strip())
         self.api_key.set(self.api_key.get().strip())
 
+        #Verify the left symbol
         if self.want_asset.get() == '':
             messagebox.showerror("Market maker", "Enter a valid left symbol")
             return False
 
+        #Verify the right symbol
         if self.offer_asset.get() == '':
             messagebox.showerror("Market maker", "Enter a valid right symbol")
             return False
 
+        #Verify the api key
         if self.api_key.get() == '':
             messagebox.showerror("Market maker", "Enter a valid Bitrevex(R) API Key")
             return False
 
         return True
 
+    '''
+    Make some advanced verifications (with API)
+    '''
     def verify_settings_stage2(self):
         user_data={}
 
         try:
+            #Verify the API key & get the user data
             bi = BitrevexInterface('user', self.api_key.get())
             user = bi.callRPCMethod('getUserInfo',{})
             user_data['user_id']=user['user']['id']
@@ -218,6 +219,9 @@ class MainWindow(Tk):
 
         return user_data
 
+    '''
+    Save settings in a file
+    '''
     def save_settings(self):
         ok_stage1 = self.verify_settings_stage1()
         user_data = self.verify_settings_stage2()
@@ -237,6 +241,9 @@ class MainWindow(Tk):
         else:
             self.make_bot_unready()
 
+    '''
+    Load settings from file (avoid retyping)
+    '''
     def load_settings(self):
         s = Settings()
         try:
@@ -252,36 +259,19 @@ class MainWindow(Tk):
         self.api_key.set(s.api_key)
         self.delay_secs.set(s.delay_secs)
 
-    def update_monitor(self, **kwargs):
-        self.mon_bot_state_label.config(bg="black")
-        self.mon_bot_state.set("Bot state: {}".format(kwargs['bot_state']))
-        if kwargs['bot_state'] == 'RUNNING':
-            self.mon_bot_state_label.config(fg="#00ff00")
-        elif kwargs['bot_state'] == 'READY':
-            self.mon_bot_state_label.config(fg="#0000ff")
-        elif kwargs['bot_state'] == 'STOPPED':
-            self.mon_bot_state_label.config(fg="#ff0000")
-        else:
-            self.mon_bot_state_label.config(fg="white")
-
-        self.mon_last_update_time.set("Last Up time : {}".format(kwargs['last_update_time']))
-        self.mon_user.set("Current user: {}".format(kwargs['user']))
-        self.mon_pair.set("Pair: {}".format(kwargs['pair']))
-        self.mon_last_mid_price.set("Last mid price: {:.8f}".format(kwargs['last_mid_price']))
-        self.mon_last_spread.set("Last spread : {:.8f}".format(kwargs['last_spread']))
-        self.mon_last_sell_price.set("Last sell price : {:.8f}".format(kwargs['last_sell_price']))
-        self.mon_last_buy_price.set("Last buy price: {:.8f}".format(kwargs['last_buy_price']))
-        self.mon_last_quantity.set("Last quantity : {:.8f}".format(kwargs['last_quantity']))
-        self.mon_last_order_status.set("Last order status : {}".format(kwargs['last_order_status']))
-        self.mon_remaining_shots.set("Remaining shots: {}".format(kwargs['remaining_shots']))
-
+    '''
+    Start the bot thread 
+    '''
     def start_bot(self):
         if self.bot_ready:
             spread_ratio = 1-(self.settings.aggressiveness)/100
+            #Create the market maker
             mmaker = MarketMaker(self.settings.want_asset,self.settings.offer_asset,spread_ratio,
                                  float(self.settings.balance_ratio),self.settings.api_key)
+            #Create the thread
             thread=BotThread(self.settings.delay_secs, self.settings.max_shots, mmaker, self)
-            thread.start()
+            thread.start() #Launch the thread
+
             self.bthread=thread
             self.make_bot_running()
             self.start_button.config(state="disabled")
@@ -311,3 +301,51 @@ class MainWindow(Tk):
         self.start_button.config(state="normal")
         self.stop_button.config(state="disabled")
 
+    def update_monitor(self, **kwargs):
+        self.mon_bot_state_label.config(bg="black")
+        self.mon_bot_state.set("Bot state: {}".format(kwargs['bot_state']))
+        if kwargs['bot_state'] == 'RUNNING':
+            self.mon_bot_state_label.config(fg="#00ff00")
+        elif kwargs['bot_state'] == 'READY':
+            self.mon_bot_state_label.config(fg="#0000ff")
+        elif kwargs['bot_state'] == 'STOPPED':
+            self.mon_bot_state_label.config(fg="#ff0000")
+        else:
+            self.mon_bot_state_label.config(fg="white")
+
+        self.mon_last_update_time.set("Last Up time : {}".format(kwargs['last_update_time']))
+        self.mon_user.set("Current user: {}".format(kwargs['user']))
+        self.mon_pair.set("Pair: {}".format(kwargs['pair']))
+        self.mon_last_mid_price.set("Last mid price: {:.8f}".format(kwargs['last_mid_price']))
+        self.mon_last_spread.set("Last spread : {:.8f}".format(kwargs['last_spread']))
+        self.mon_last_sell_price.set("Last sell price : {:.8f}".format(kwargs['last_sell_price']))
+        self.mon_last_buy_price.set("Last buy price: {:.8f}".format(kwargs['last_buy_price']))
+        self.mon_last_quantity.set("Last quantity : {:.8f}".format(kwargs['last_quantity']))
+        self.mon_last_order_status.set("Last order status : {}".format(kwargs['last_order_status']))
+        self.mon_remaining_shots.set("Remaining shots: {}".format(kwargs['remaining_shots']))
+
+
+    def make_bot_unready(self):
+        self.update_monitor(bot_state='NOT CONFIGURED', last_update_time='00:00:00',
+                            pair='', user='', last_mid_price=0, last_spread=0, last_buy_price=0,
+                            last_sell_price=0, last_quantity=0,
+                            last_order_status='', remaining_shots=0)
+        self.bot_ready=False
+
+    def make_bot_ready(self):
+        self.update_monitor(bot_state='READY', last_update_time='00:00:00',
+                            user="{}".format(self.user_data['user_email']),
+                            pair="{}/{}".format(self.settings.want_asset, self.settings.offer_asset),
+                            last_mid_price=0, last_spread=0, last_buy_price=0,
+                            last_sell_price=0, last_quantity=0,
+                            last_order_status='', remaining_shots=0)
+        self.bot_ready=True
+
+    def make_bot_running(self):
+        self.update_monitor(bot_state='RUNNING', last_update_time='00:00:00',
+                            user="{}".format(self.user_data['user_email']),
+                            pair="{}/{}".format(self.settings.want_asset, self.settings.offer_asset),
+                            last_mid_price=0, last_spread=0, last_buy_price=0,
+                            last_sell_price=0, last_quantity=0,
+                            last_order_status='', remaining_shots=0)
+        self.bot_ready=True

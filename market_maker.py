@@ -47,15 +47,39 @@ class MarketMaker:
 
         # get our open orders
         bi = BitrevexInterface('trade', self.api_key)
-        open_orders = bi.callRPCMethod('getOpenOrders', {})
-        try:
-            sell_prices = [float(order['price'])
-                                for order in open_orders
-                                if (order['side'] == 'SELL') and (order['pair'] == self.pair)]
 
-            buy_prices = [float(order['price'])
-                                 for order in open_orders
-                                 if (order['side'] == 'BUY') and (order['pair'] == self.pair)]
+        open_sell_orders = bi.callRPCMethod('getAllOpenOrders', {
+            'want_symbol':self.want_asset,
+            'offer_symbol':self.offer_asset,
+            'order_side':'ASK',
+            'order_type':'LIMIT'
+        })
+
+        open_sell_orders = open_sell_orders + bi.callRPCMethod('getAllOpenOrders', {
+            'want_symbol': self.want_asset,
+            'offer_symbol': self.offer_asset,
+            'order_side': 'ASK',
+            'order_type': 'MARKET'
+        })
+
+        open_buy_orders = bi.callRPCMethod('getAllOpenOrders', {
+            'want_symbol':self.want_asset,
+            'offer_symbol':self.offer_asset,
+            'order_side':'BID',
+            'order_type':'LIMIT'
+        })
+
+        open_buy_orders = open_buy_orders + bi.callRPCMethod('getAllOpenOrders', {
+            'want_symbol': self.want_asset,
+            'offer_symbol': self.offer_asset,
+            'order_side': 'BID',
+            'order_type': 'MARKET'
+        })
+
+        try:
+            sell_prices = [float(order['price']) for order in open_sell_orders]
+
+            buy_prices = [float(order['price']) for order in open_buy_orders]
 
             if sell_prices == [] or buy_prices == []:
                 raise MarketMakerError("Missing sell orders or buy orders in the market {}".format(self.pair))
@@ -65,7 +89,6 @@ class MarketMaker:
             max_buy_price = max(buy_prices)
 
             # compute the spread
-
             spread = min_sell_price - max_buy_price
 
             # compute the middle price
