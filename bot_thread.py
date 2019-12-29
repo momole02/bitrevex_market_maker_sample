@@ -24,6 +24,7 @@ class BotThread(threading.Thread):
         self.window=window
         self.last_shot_time = time.time()
         self.report=None
+        self.must_stop=False
 
     '''
     Bot thread entry point
@@ -32,7 +33,7 @@ class BotThread(threading.Thread):
 
         remaining_shots=self.max_shots
         print("[MarketMaker thread] thread started")
-        while remaining_shots>0:
+        while remaining_shots>0 and not self.must_stop:
             tm=time.time()
 
             if tm-self.last_shot_time >= self.delay:

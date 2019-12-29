@@ -31,6 +31,8 @@ class MainWindow(Tk):
         self.image=None
         self.mon_bot_state_label=None
         self.mon_last_order_status_label=None
+        self.start_button=None
+        self.stop_button=None
 
         #settings  variables
         self.balance_ratio=StringVar()
@@ -55,6 +57,7 @@ class MainWindow(Tk):
         self.mon_last_sell_price=StringVar()
         self.mon_last_quantity=StringVar()
         self.mon_last_order_status=StringVar()
+        self.mon_remaining_shots=StringVar()
         self.mon_remaining_shots=StringVar()
 
 
@@ -153,6 +156,8 @@ class MainWindow(Tk):
         Label(t2, textvariable=self.mon_last_update_time, fg="blue",relief=RIDGE).grid(row=8,column=0,pady=5,sticky=W+E+N+S)
         self.start_button=Button(t2, text="Start the bot Now !", command=self.start_bot)
         self.start_button.grid(row=9,column=0,pady=15,sticky=W+E+N+S)
+        self.stop_button=Button(t2, text="Stop !", state="disabled", command=self.stop_bot)
+        self.stop_button.grid(row=9,column=1,pady=15,sticky=W+E+N+S)
 
     def verify_settings_stage1(self):
         if  not re.match(r'^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$', self.balance_ratio.get()):
@@ -280,9 +285,14 @@ class MainWindow(Tk):
             self.bthread=thread
             self.make_bot_running()
             self.start_button.config(state="disabled")
+            self.stop_button.config(state="normal")
 
         else:
             messagebox.showerror("Error", "Go to the settings to configure the bot and restart again")
+
+    def stop_bot(self):
+        self.stop_button.config(state="disabled")
+        self.bthread.must_stop=True
 
     def on_bot_round(self, data):
 
@@ -299,3 +309,5 @@ class MainWindow(Tk):
     def on_bot_terminated(self, data):
         self.make_bot_ready()
         self.start_button.config(state="normal")
+        self.stop_button.config(state="disabled")
+

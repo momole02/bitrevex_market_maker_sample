@@ -51,25 +51,25 @@ class MarketMaker:
         try:
             sell_prices = [float(order['price'])
                                 for order in open_orders
-                                if order['side'] == 'SELL' and order['pair'] == self.pair]
+                                if (order['side'] == 'SELL') and (order['pair'] == self.pair)]
 
             buy_prices = [float(order['price'])
                                  for order in open_orders
-                                 if order['side'] == 'BUY' and order['pair'] == self.pair]
+                                 if (order['side'] == 'BUY') and (order['pair'] == self.pair)]
 
             if sell_prices == [] or buy_prices == []:
                 raise MarketMakerError("Missing sell orders or buy orders in the market {}".format(self.pair))
 
-            max_sell_price = max(sell_prices)
+            min_sell_price = min(sell_prices)
 
-            min_buy_price = min(buy_prices)
+            max_buy_price = max(buy_prices)
 
             # compute the spread
 
-            spread = max_sell_price - min_buy_price
+            spread = min_sell_price - max_buy_price
 
             # compute the middle price
-            mid_price = (max_sell_price + min_buy_price) / 2
+            mid_price = (min_sell_price + max_buy_price) / 2
 
             return {'spread': spread, 'mid_price': mid_price}
 
